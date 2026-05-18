@@ -122,5 +122,75 @@ export function createRouter() {
     ok(res, null, "Contraseña actualizada");
   }, { private: true });
 
+  const roles = new FirestoreRepository<Record<string, unknown>>("roles");
+
+  router.add("GET", "/api/roles", async (_req, res) => {
+    ok(res, await roles.list());
+  }, { private: true, roles: adminRoles });
+  router.add("POST", "/api/roles", async (req, res) => {
+    const body = asObject(req.body);
+    const created = await roles.create({ name: requiredString(body, "name"), description: optionalString(body, "description") });
+    await audit(req, "create", "roles", created.id);
+    ok(res, created, "Rol creado", 201);
+  }, { private: true, roles: adminRoles });
+  router.add("PUT", "/api/roles/:id", async (req, res) => {
+    const body = asObject(req.body);
+    const updated = await roles.update(req.params.id, { name: requiredString(body, "name"), description: optionalString(body, "description") });
+    await audit(req, "update", "roles", req.params.id);
+    ok(res, updated, "Rol actualizado");
+  }, { private: true, roles: adminRoles });
+  router.add("DELETE", "/api/roles/:id", async (req, res) => {
+    await roles.delete(req.params.id);
+    await audit(req, "delete", "roles", req.params.id);
+    ok(res, null, "Rol eliminado");
+  }, { private: true, roles: adminRoles });
+  router.add("GET", "/api/permissions", (_req, res) => ok(res, ["books:write", "authors:write", "loans:write", "fines:write", "users:write"]), { private: true, roles: adminRoles });
+
+  router.add("GET", "/api/users", async (_req, res) => ok(res, await users.list()), { private: true, roles: staffRoles });
+  router.add("GET", "/api/users/:id", async (req, res) => {
+    const user = await users.get(req.params.id);
+    if (!user) return fail(res, 404, "Usuario no encontrado", "USER_NOT_FOUND");
+    ok(res, user);
+  }, { private: true });
+  router.add("POST", "/api/users", async (req, res) => {
+    const body = asObject(req.body);
+    const email = requiredString(body, "email");
+    const name = requiredString(body, "name");
+    assertEmail(email);
+    const role = normalizeRole(optionalString(body, "role", "Usuario"));
+    const password = requiredString(body, "password");
+    const created = await auth.createUser({ email, password, displayName: name });
+    const profile = await users.create({ email, name, role, status: "active" }, created.uid);
+    await audit(req, "create", "users", created.uid);
+    ok(res, profile, "Usuario creado", 201);
+  }, { private: true, roles: adminRoles });
+  router.add("PUT", "/api/users/:id", async (req, res) => {
+    const body = asObject(req.body);
+    const payload: Record<string, unknown> = {};
+    const name = optionalString(body, "name");
+    if (name) payload.name = name;
+    const email = optionalString(body, "email");
+    if (email) payload.email = email;
+    if (body.role !== undefined && body.role !== null && body.role !== "") {
+      payload.role = normalizeRole(String(body.role));
+    }
+    const updated = await users.update(req.params.id, payload);
+    await audit(req, "update", "users", req.params.id);
+    ok(res, updated, "Usuario actualizado");
+  }, { private: true, roles: adminRoles });
+  router.add("PATCH", "/api/users/:id/status", async (req, res) => {
+    const body = asObject(req.body);
+    const status = requiredString(body, "status");
+    const updated = await users.update(req.params.id, { status });
+    await audit(req, "status_change", "users", req.params.id, { status });
+    ok(res, updated, "Estado actualizado");
+  }, { private: true, roles: adminRoles });
+  router.add("DELETE", "/api/users/:id", async (req, res) => {
+    await users.delete(req.params.id);
+    await auth.deleteUser(req.params.id).catch(() => undefined);
+    await audit(req, "delete", "users", req.params.id);
+    ok(res, null, "Usuario eliminado");
+  }, { private: true, roles: adminRoles });
+
   return router;
 }
