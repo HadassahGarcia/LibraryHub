@@ -192,5 +192,74 @@ export function createRouter() {
     ok(res, null, "Usuario eliminado");
   }, { private: true, roles: adminRoles });
 
+  router.add("GET", "/api/books", async (_req, res) => ok(res, await books.list()));
+  router.add("GET", "/api/books/:id", async (req, res) => {
+    const book = await books.get(req.params.id);
+    if (!book) return fail(res, 404, "Libro no encontrado", "BOOK_NOT_FOUND");
+    ok(res, book);
+  });
+  router.add("POST", "/api/books", async (req, res) => {
+    const created = await books.create(bookPayload(asObject(req.body)));
+    await audit(req, "create", "books", created.id);
+    ok(res, created, "Libro creado", 201);
+  }, { private: true, roles: staffRoles });
+  router.add("PUT", "/api/books/:id", async (req, res) => {
+    const updated = await books.update(req.params.id, bookPayload(asObject(req.body)));
+    await audit(req, "update", "books", req.params.id);
+    ok(res, updated, "Libro actualizado");
+  }, { private: true, roles: staffRoles });
+  router.add("PATCH", "/api/books/:id/status", async (req, res) => {
+    const body = asObject(req.body);
+    const status = requiredString(body, "status");
+    const validStatuses = ["Disponible", "Prestado", "Mantenimiento", "Baja"];
+    if (!validStatuses.includes(status)) return fail(res, 400, "Estado inválido", "INVALID_STATUS");
+    const updated = await books.update(req.params.id, { status });
+    await audit(req, "status_change", "books", req.params.id, { status });
+    ok(res, updated, "Estado actualizado");
+  }, { private: true, roles: staffRoles });
+  router.add("DELETE", "/api/books/:id", async (req, res) => {
+    await books.delete(req.params.id);
+    await audit(req, "delete", "books", req.params.id);
+    ok(res, null, "Libro eliminado");
+  }, { private: true, roles: staffRoles });
+
+  router.add("GET", "/api/authors", async (_req, res) => ok(res, await authors.list()));
+  router.add("POST", "/api/authors", async (req, res) => {
+    const body = asObject(req.body);
+    const created = await authors.create({ name: requiredString(body, "name"), bio: optionalString(body, "bio") });
+    await audit(req, "create", "authors", created.id);
+    ok(res, created, "Autor creado", 201);
+  }, { private: true, roles: staffRoles });
+  router.add("PUT", "/api/authors/:id", async (req, res) => {
+    const body = asObject(req.body);
+    const updated = await authors.update(req.params.id, { name: requiredString(body, "name"), bio: optionalString(body, "bio") });
+    await audit(req, "update", "authors", req.params.id);
+    ok(res, updated, "Autor actualizado");
+  }, { private: true, roles: staffRoles });
+  router.add("DELETE", "/api/authors/:id", async (req, res) => {
+    await authors.delete(req.params.id);
+    await audit(req, "delete", "authors", req.params.id);
+    ok(res, null, "Autor eliminado");
+  }, { private: true, roles: staffRoles });
+
+  router.add("GET", "/api/book-categories", async (_req, res) => ok(res, await categories.list()));
+  router.add("POST", "/api/book-categories", async (req, res) => {
+    const body = asObject(req.body);
+    const created = await categories.create({ name: requiredString(body, "name") });
+    await audit(req, "create", "book-categories", created.id);
+    ok(res, created, "Categoría creada", 201);
+  }, { private: true, roles: staffRoles });
+  router.add("PUT", "/api/book-categories/:id", async (req, res) => {
+    const body = asObject(req.body);
+    const updated = await categories.update(req.params.id, { name: requiredString(body, "name") });
+    await audit(req, "update", "book-categories", req.params.id);
+    ok(res, updated, "Categoría actualizada");
+  }, { private: true, roles: staffRoles });
+  router.add("DELETE", "/api/book-categories/:id", async (req, res) => {
+    await categories.delete(req.params.id);
+    await audit(req, "delete", "book-categories", req.params.id);
+    ok(res, null, "Categoría eliminada");
+  }, { private: true, roles: staffRoles });
+
   return router;
 }
