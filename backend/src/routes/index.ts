@@ -261,5 +261,113 @@ export function createRouter() {
     ok(res, null, "Categoría eliminada");
   }, { private: true, roles: staffRoles });
 
+  router.add("GET", "/api/loans", async (_req, res) => ok(res, await loans.list()), { private: true, roles: staffRoles });
+  router.add("GET", "/api/users/:id/loans", async (req, res) => {
+    ok(res, (await loans.list()).filter((loan) => loan.userId === req.params.id));
+  }, { private: true });
+  router.add("POST", "/api/loans", async (req, res) => {
+    const body = asObject(req.body);
+    const bookId = requiredString(body, "bookId");
+    const userId = requiredString(body, "userId");
+    if (await hasPendingFines(userId)) return fail(res, 409, "El usuario tiene multas pendientes", "LOAN_USER_HAS_FINES");
+    const book = await books.get(bookId);
+    if (!book) return fail(res, 404, "Libro no encontrado", "BOOK_NOT_FOUND");
+    if (book.status !== "Disponible") return fail(res, 409, "El libro no está disponible", "BOOK_UNAVAILABLE");
+    const profile = await users.get(userId);
+    const created = await loans.create({
+      bookId,
+      userId,
+      userName: optionalString(body, "userName", String(profile?.name || "")),
+      borrowDate: optionalString(body, "borrowDate", new Date().toISOString()),
+      dueDate: requiredString(body, "dueDate"),
+      returnDate: null,
+      status: "Activo",
+    });
+    await books.update(bookId, { status: "Prestado" });
+    await audit(req, "create", "loans", created.id, { bookId, userId });
+    ok(res, created, "Préstamo creado", 201);
+  }, { private: true, roles: staffRoles });
+  router.add("POST", "/api/loans/request", async (req, res) => {
+    const body = asObject(req.body);
+    const bookId = requiredString(body, "bookId");
+    const userId = req.user!.id;
+    if (await hasPendingFines(userId)) return fail(res, 409, "Tienes multas pendientes", "LOAN_USER_HAS_FINES");
+    const book = await books.get(bookId);
+    if (!book) return fail(res, 404, "Libro no encontrado", "BOOK_NOT_FOUND");
+    if (book.status !== "Disponible") return fail(res, 409, "El libro no está disponible", "BOOK_UNAVAILABLE");
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 14);
+    const created = await loans.create({
+      bookId,
+      userId,
+      userName: req.user!.name,
+      borrowDate: new Date().toISOString(),
+      dueDate: dueDate.toISOString(),
+      returnDate: null,
+      status: "Activo",
+    });
+    await books.update(bookId, { status: "Prestado" });
+    await audit(req, "create", "loans", created.id, { bookId, userId, source: "self" });
+    ok(res, created, "Préstamo solicitado", 201);
+  }, { private: true });
+
+  router.add("POST", "/api/loans/:id/return", async (req, res) => {
+    const loan = await loans.get(req.params.id);
+    if (!loan) return fail(res, 404, "Préstamo no encontrado", "LOAN_NOT_FOUND");
+    if (loan.status !== "Activo") return fail(res, 409, "El préstamo ya fue cerrado", "LOAN_ALREADY_CLOSED");
+    const returnDate = new Date();
+    const dueDate = new Date(String(loan.dueDate));
+    const lateDays = Math.max(0, Math.ceil((returnDate.getTime() - dueDate.getTime()) / 86400000));
+    const updated = await loans.update(req.params.id, { status: "Devuelto", returnDate: returnDate.toISOString() });
+    await books.update(String(loan.bookId), { status: "Disponible" });
+    if (lateDays > 0) {
+      await fines.create({
+        userId: loan.userId,
+        userName: loan.userName,
+        amount: lateDays * env.finePerDay,
+        reason: `Retraso en devolución (${lateDays} días)`,
+        status: "Pendiente",
+        loanId: req.params.id,
+      });
+    }
+    await audit(req, "loan_return", "loans", req.params.id, { lateDays });
+    ok(res, updated, "Préstamo cerrado");
+  }, { private: true, roles: staffRoles });
+
+  router.add("GET", "/api/fines", async (_req, res) => ok(res, await fines.list()), { private: true });
+  router.add("POST", "/api/fines/:id/pay", async (req, res) => {
+    const updated = await fines.update(req.params.id, { status: "Pagado", paidAt: new Date().toISOString() });
+    await audit(req, "fine_payment", "fines", req.params.id);
+    ok(res, updated, "Multa pagada");
+  }, { private: true, roles: staffRoles });
+
+  router.add("GET", "/api/dashboard/summary", async (_req, res) => {
+    const [bookList, loanList, fineList, userList] = await Promise.all([books.list(), loans.list(), fines.list(), users.list()]);
+    const bookMap = Object.fromEntries(bookList.map((b) => [b.id as string, b]));
+    const mostBorrowedCounts = loanList.reduce<Record<string, number>>((acc, loan) => {
+      acc[String(loan.bookId)] = (acc[String(loan.bookId)] || 0) + 1;
+      return acc;
+    }, {});
+    const mostBorrowed = Object.entries(mostBorrowedCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([bookId, count]) => ({ bookId, count, book: bookMap[bookId] || null }));
+    const recentLoans = loanList
+      .filter((l) => l.borrowDate)
+      .sort((a, b) => new Date(String(b.borrowDate)).getTime() - new Date(String(a.borrowDate)).getTime())
+      .slice(0, 5)
+      .map((l) => ({ ...l, bookTitle: String(bookMap[String(l.bookId)]?.title || "Libro desconocido") }));
+    ok(res, {
+      totalBooks: bookList.length,
+      availableBooks: bookList.filter((book) => book.status === "Disponible").length,
+      activeLoans: loanList.filter((loan) => loan.status === "Activo").length,
+      pendingFines: fineList.filter((fine) => fine.status === "Pendiente").reduce((acc, fine) => acc + Number(fine.amount || 0), 0),
+      totalUsers: userList.length,
+      mostBorrowed,
+      recentLoans,
+    });
+  }, { private: true, roles: staffRoles });
+  router.add("GET", "/api/audit", async (_req, res) => ok(res, await auditRepo.list()), { private: true, roles: adminRoles });
+
   return router;
 }
