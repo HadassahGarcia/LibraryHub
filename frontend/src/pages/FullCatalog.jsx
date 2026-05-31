@@ -43,8 +43,7 @@ export default function FullCatalog() {
           El Catálogo
         </h1>
         <p className="font-serif italic text-muted-foreground max-w-2xl text-lg">
-          Explora nuestra colección completa de obras físicas y digitales
-          curadas meticulosamente por nuestros bibliotecarios.
+          Consulta la disponibilidad del inventario y encuentra tu siguiente lectura.
         </p>
       </div>
 

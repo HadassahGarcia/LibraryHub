@@ -26,14 +26,13 @@ export default function Catalog() {
 
   return (
     <div className="flex flex-col md:flex-row gap-12">
-      {/* Featured Article / Highlight (Left Col) */}
       <div className="md:w-2/3 flex flex-col">
         <div className="flex items-center justify-between border-b-2 border-foreground pb-2 mb-6">
           <h2 className="text-sm font-bold uppercase tracking-widest text-foreground">
             Lectura Destacada
           </h2>
           <span className="text-[11px] font-serif italic text-primary">
-            Selección del Editor
+            Disponible para consulta
           </span>
         </div>
 
@@ -51,7 +50,6 @@ export default function Catalog() {
                 alt={books[0].title}
                 className="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-700"
               />
-              {/* Halftone / Newsprint overlay effect */}
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAiLz4KPGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMC4xIi8+Cjwvc3ZnPg==')] opacity-30 mix-blend-overlay"></div>
             </div>
             <div>
@@ -84,7 +82,6 @@ export default function Catalog() {
         )}
       </div>
 
-      {/* Side Column (Right Col) */}
       <div className="md:w-1/3 flex flex-col border-l-0 md:border-l border-border md:pl-12">
         <div className="border-b-2 border-foreground pb-2 mb-6 flex justify-between items-center">
           <h2 className="text-sm font-bold uppercase tracking-widest">
@@ -146,8 +143,7 @@ export default function Catalog() {
           <BookOpen className="w-8 h-8 mb-4 text-primary" />
           <h3 className="font-heading font-bold text-xl mb-2">Los Archivos</h3>
           <p className="text-sm font-serif text-muted-foreground mb-6">
-            Busca en nuestra extensa colección de más de 10,000 artículos
-            físicos y digitalizados.
+            Busca por título o autor dentro del inventario registrado.
           </p>
           <form
             onSubmit={(e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/catalog?q=${encodeURIComponent(searchQuery.trim())}`); }}

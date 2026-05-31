@@ -18,8 +18,8 @@ export default function PublicLayout() {
           })}
         </span>
         <div className="flex gap-4">
-          <Link to="/" className="hover:text-primary transition-colors">Vol. 1, Edición 1</Link>
-          <span>Est. 2026</span>
+          <Link to="/" className="hover:text-primary transition-colors">Biblioteca digital</Link>
+          <span>Inventario activo</span>
         </div>
       </div>
 
@@ -27,7 +27,7 @@ export default function PublicLayout() {
         <Link to="/" className="text-5xl md:text-7xl font-serif font-bold tracking-tighter text-foreground hover:opacity-90 transition-opacity flex items-center gap-2">
           Library<span className="text-primary">Hub</span>
         </Link>
-        <p className="font-serif italic text-muted-foreground mt-4 text-lg">"Una curaduría premium de conocimiento e historia."</p>
+        <p className="font-serif italic text-muted-foreground mt-4 text-lg">Catálogo, préstamos y consulta para la comunidad lectora.</p>
 
         <div className="absolute right-6 top-8 flex items-center gap-4">
           {isAuthenticated ? (
@@ -60,7 +60,7 @@ export default function PublicLayout() {
       <footer className="border-t border-border mt-12 py-12 px-6 flex flex-col items-center text-center">
         <h2 className="text-3xl font-serif font-bold tracking-tighter mb-4">Library<span className="text-primary">Hub</span></h2>
         <p className="max-w-md text-muted-foreground text-sm font-serif italic mb-8">
-          Dedicados a proveer la mejor experiencia de lectura digital. Preservando historias, curando hechos y empoderando mentes.
+          Biblioteca digital para consultar libros, revisar disponibilidad y dar seguimiento a préstamos.
         </p>
         <div className="flex gap-6 text-sm uppercase tracking-wide">
           <Link to="#" className="hover:text-primary">Sobre Nosotros</Link>

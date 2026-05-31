@@ -32,7 +32,6 @@
 }
 
 :root {
-  /* Editorial Newspaper Theme - Modernized with Blue */
   --background: #fdfcf8;
   --foreground: #111827;
 
@@ -61,7 +60,7 @@
   --input: #c1d2e6;
   --ring: #496c99;
 
-  --radius: 0rem; /* Flat sharp edges */
+  --radius: 0rem;
 }
 
 @layer base {

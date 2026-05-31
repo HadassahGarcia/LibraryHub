@@ -39,7 +39,6 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-muted/30 flex">
-      {/* Sidebar */}
       <motion.aside
         initial={false}
         animate={{ width: sidebarOpen ? 280 : 80 }}
@@ -56,7 +55,7 @@ export default function AdminLayout() {
                   Library<span className="text-primary">Hub</span>
                 </h1>
                 <p className="text-[10px] uppercase tracking-widest opacity-50 mt-1">
-                  El Archivo Diario
+                  Administración
                 </p>
               </div>
             ) : (
@@ -133,7 +132,6 @@ export default function AdminLayout() {
         </div>
       </motion.aside>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 bg-card border-b border-border flex items-center px-6 justify-between sticky top-0 z-10 box-border">
           <div className="flex items-center gap-4">
